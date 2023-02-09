@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
 
+from itertools import islice
 from pathlib import Path
 
 import click
 
 
 @click.command()
-@click.argument('simdir')
-def prepare(simdir):
-    simdir = Path(simdir)
+@click.argument('root')
+@click.argument('out')
+def prepare(root, out):
+    root = Path(root)
 
-    print(
-'''#DISBATCH PREFIX cd $HOME/scc/fvillaescusa-compression; ./compress_hdf5.py 
-#DISBATCH SUFFIX  -p 6 -v 11
-''')
+    print(r'#DISBATCH PREFIX ../compress_hdf5.py ')
 
-    for snapdir in simdir.glob('snapdir_*/'):
-        for fn in snapdir.glob('snap_*.hdf5'):
-            print(f'{fn} out/{snapdir.name}/')
+    for d in root.glob('*/'):
+        for fn in d.glob('**/snap_*.hdf5'):
+            print(f'{fn.absolute()} {out/fn.relative_to(root).parent}')
+            break
+
+    # for fn in root.glob('**/snap_*.hdf5'):
+    #     print(f'{fn.absolute()} {out/fn.relative_to(root).parent}')
 
 
 if __name__ == '__main__':
