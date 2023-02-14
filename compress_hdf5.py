@@ -47,6 +47,7 @@ def compress(src, dst, truncpos='auto', truncvel='auto', verbose=False):
             for i in [1,2]:
                 if f'/PartType{i}' not in h5in:
                     continue
+                # iord = np.argsort(h5in[f'/PartType{i}/ParticleIDs'][:])
                 for name in compression_opts:
                     p = h5in[f'/PartType{i}/{name}'][:]
 
@@ -71,6 +72,7 @@ def compress(src, dst, truncpos='auto', truncvel='auto', verbose=False):
         if outsize > h5size:
             raise RuntimeError(f'Compressed size {outsize} greater than uncompressed size {h5size}')
 
+        out.chmod(0o444)
         out.rename(out.with_suffix('.hdf5'))
 
 
