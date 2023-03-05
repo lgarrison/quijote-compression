@@ -76,6 +76,12 @@ def compress(src, dst, truncpos='auto', truncvel='auto', verbose=False):
         out.rename(out.with_suffix('.hdf5'))
 
 
+def nearest_boxsize(box):
+    '''Boxsize to the nearest factor of two relative to 1e6
+    '''
+    return 2**np.round(np.log2(box/1e6))*1e6
+
+
 def get_compression_opts(attrs, truncpos, truncvel, clevel=5):
 
     TRUNC_LEVELS = {
@@ -85,12 +91,13 @@ def get_compression_opts(attrs, truncpos, truncvel, clevel=5):
         }
 
     box = attrs['BoxSize']
+    rounded_box = nearest_boxsize(box)
     n1d = int(round(attrs['NumPart_Total'][1]**(1/3)))
 
     if truncpos == 'auto':
-        truncpos = TRUNC_LEVELS[(box,n1d)][0]
+        truncpos = TRUNC_LEVELS[(rounded_box,n1d)][0]
     if truncvel == 'auto':
-        truncvel = TRUNC_LEVELS[(box,n1d)][1]
+        truncvel = TRUNC_LEVELS[(rounded_box,n1d)][1]
 
     compression_opts = dict(
         Coordinates=dict(

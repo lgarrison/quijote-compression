@@ -21,14 +21,18 @@ from tqdm import tqdm
 @click.option('--dryrun', '-d', is_flag=True, default=False)
 def compress(src, dst, verbose=False, dryrun=False):
     t = -default_timer()
-    src = Path(src)
-    dst = Path(dst)
+    src = Path(src).resolve()
+    dst = Path(dst).resolve()
 
     if dryrun:
         # shutil.copy = lambda src,dst: print(f'Copy: {src} -> {dst}')
         # shutil.copytree = lambda src,dst: print(f'Copy tree: {src} -> {dst}')
         shutil.copy = lambda src,dst: print(src)
         shutil.copytree = lambda src,dst: print(src)
+
+        chmod = lambda p,m: None
+    else:
+        chmod = lambda p,m: p.chmod(m)
 
     i = 0
     for srcpath, dns, fns in tqdm(os.walk(src), unit=' path'):
@@ -38,7 +42,7 @@ def compress(src, dst, verbose=False, dryrun=False):
         dstpath = dst / srcpath.relative_to(src)
 
         if dstpath.exists():
-            dstpath.chmod(0o755)
+            chmod(dstpath, 0o755)
             for fn in fns:
                 if re.match(r'ics\.\d+', fn):
                     continue
@@ -46,14 +50,14 @@ def compress(src, dst, verbose=False, dryrun=False):
                     ((dstpath / fn).stat().st_size != (srcpath / fn).stat().st_size):
                     assert not fn.endswith('.hdf5')
                     shutil.copy(srcpath / fn, dstpath / fn)
-                    (dstpath / fn).chmod(0o444)
-            dstpath.chmod(0o555)
+                    chmod(dstpath / fn, 0o444)
+            chmod(dstpath, 0o555)
         else:
             assert not re.match(r'snapdir_\d+', dstpath.name)
-            dstpath.parent.chmod(0o755)
+            chmod(dstpath.parent, 0o755)
             shutil.copytree(srcpath, dstpath)
-            dstpath.chmod(0o555)
-            dstpath.parent.chmod(0o555)
+            chmod(dstpath, 0o555)
+            chmod(dstpath.parent, 0o555)
             dns.clear()
 
         i += 1

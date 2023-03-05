@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-Compress IC to HDF5; no lossiness
+Compress Gadget files (IC or snap) to HDF5
 '''
 
 import json
@@ -18,19 +18,20 @@ import readsnap
 @click.command()
 @click.argument('src', nargs=-1)
 @click.argument('dst')
-@click.option('truncpos', '-p', default=0,
+@click.option('truncpos', '-p', default='auto',
     help='Number of low bits to null out in the position data',
 )
-@click.option('truncvel', '-v', default=0,
+@click.option('truncvel', '-v', default='auto',
     help='Number of low bits to null out in the velocity data',
 )
 @click.option('verbose', '-V', is_flag=True, default=False)
-def compress(src, dst, truncpos, truncvel, verbose=False):
+@click.option('sort', '-s', is_flag=True, default=False)
+def compress(src, dst, truncpos, truncvel, verbose=False, sort=False):
     t = -default_timer()
     dst = Path(dst)
     src = [Path(fn) for fn in src]
     validate_paths(src, dst)
-    dst.parents[1].chmod(0o755)
+    # dst.parents[1].chmod(0o755)
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     all_headers = [vars(readsnap.snapshot_header(fn)) for fn in src]
@@ -52,24 +53,39 @@ def compress(src, dst, truncpos, truncvel, verbose=False):
             if (npart := header['NumPart_ThisFile'][i]) == 0:
                 continue
 
-            for (name, opts) in compression_opts.items():
-                assert opts['truncbits'] == 0
+            for name in ['ParticleIDs', 'Coordinates', 'Velocities']:
+                opts = compression_opts[name]
                 shape = (npart,3) if name in ('Coordinates','Velocities') else (npart,)
-                dset = h5out.create_dataset(f'/PartType{i}/{name}',
-                    shape=shape,
-                    **opts['hdf5'],
-                    )
+                tmp = np.empty(shape, dtype=opts['hdf5']['dtype'])
+                
                 blockname = opts['blockname']
                 nwrite = 0
                 for fn in src:
+                    if 'ic' in fn.name:
+                        assert opts['truncbits'] == 0
                     block = readsnap.read_block(fn, blockname, parttype=i,
                         physical_velocities=False,
                         )
                     insize += block.nbytes
-                    dset[nwrite : nwrite + len(block)] = block
+
+                    tbits = opts['truncbits']
+                    mask = ~np.uint32((1 << tbits) - 1)
+                    block = (block.view(dtype=np.uint32) & mask).view(dtype=block.dtype)
+
+                    tmp[nwrite : nwrite + len(block)] = block
                     nwrite += len(block)
                     del block
                 assert nwrite == shape[0]
+
+                if sort:
+                    if name == 'ParticleIDs':
+                        iord = np.argsort(tmp)
+                    tmp = tmp[iord]
+                h5out.create_dataset(f'/PartType{i}/{name}',
+                    data=tmp,
+                    **opts['hdf5'],
+                    )
+            del iord
 
     outsize = out.stat().st_size
     t += default_timer()
@@ -91,8 +107,8 @@ def get_compression_opts(header, truncpos, truncvel, clevel=5):
 
     TRUNC_LEVELS = {
         # (box, n1d): (truncpos, truncvel)
-        (1e6,1024): (0,0),
-        (1e6,512): (0,0),
+        (1e6,1024): (6,11),
+        (1e6,512): (7,11),
         }
 
     box = header['BoxSize']
@@ -113,7 +129,7 @@ def get_compression_opts(header, truncpos, truncvel, clevel=5):
                                    shuffle=hdf5plugin.Blosc.BITSHUFFLE,
                                    ),
             ),
-            truncbits=0,
+            truncbits=truncpos,
             blockname="POS ",
         ),
         Velocities=dict(
@@ -125,7 +141,7 @@ def get_compression_opts(header, truncpos, truncvel, clevel=5):
                                    shuffle=hdf5plugin.Blosc.BITSHUFFLE,
                                    ),
             ),
-            truncbits=0,
+            truncbits=truncvel,
             blockname="VEL ",
         ),
         ParticleIDs=dict(
@@ -164,15 +180,15 @@ def validate_headers(headers):
     # 'omega_l', 'hubble']
 
     for header in headers:
-        assert re.match(r'ics.\d+', str(header['filename'].name))
+        # assert re.match(r'ics.\d+', str(header['filename'].name))
         assert (header['npart'] <= header['nall']).all()
         assert np.all((header['massarr'] > 0) == (header['nall'] > 0))
         assert header['time'] > 0
         assert header['redshift'] > 0
         assert header['nall'].sum() in (512**3, 1024**3, 512**3 * 2)
-        assert header['filenum'] in (128,512)
+        assert header['filenum'] in (8,64,128,512)
         assert (header['filenum'] // len(headers)) * len(headers) == header['filenum']
-        assert header['boxsize'] == 1e6
+        # assert header['boxsize'] == 1e6
 
         # Only Type 1, and maybe Type 2
         assert np.all(header['nall'][[0,3,4,5]] == 0)
