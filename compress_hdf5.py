@@ -88,6 +88,7 @@ def get_compression_opts(attrs, truncpos, truncvel, clevel=5):
         # (box, n1d): (truncpos, truncvel)
         (1e6,1024): (6,11),
         (1e6,512): (7,11),
+        (1e6,256): (8,11),
         }
 
     box = attrs['BoxSize']

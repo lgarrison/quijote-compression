@@ -38,7 +38,9 @@ def compress(src, dst, truncpos, truncvel, verbose=False, sort=False):
     validate_headers(all_headers)
     header = to_hdf5_header(all_headers)
 
-    compression_opts = get_compression_opts(header, truncpos, truncvel)
+    compression_opts = get_compression_opts(header, truncpos, truncvel,
+                        sort=sort,
+                        )
 
     out = dst.with_suffix('.inprogress')
     insize = 0
@@ -85,7 +87,8 @@ def compress(src, dst, truncpos, truncvel, verbose=False, sort=False):
                     data=tmp,
                     **opts['hdf5'],
                     )
-            del iord
+            if sort:
+                del iord
 
     outsize = out.stat().st_size
     t += default_timer()
@@ -103,12 +106,13 @@ def compress(src, dst, truncpos, truncvel, verbose=False, sort=False):
     out.rename(out.with_suffix('.hdf5'))
 
 
-def get_compression_opts(header, truncpos, truncvel, clevel=5):
+def get_compression_opts(header, truncpos, truncvel, clevel=5, sort=False):
 
     TRUNC_LEVELS = {
         # (box, n1d): (truncpos, truncvel)
         (1e6,1024): (6,11),
         (1e6,512): (7,11),
+        (1e6,256): (8,11),
         }
 
     box = header['BoxSize']
@@ -129,7 +133,7 @@ def get_compression_opts(header, truncpos, truncvel, clevel=5):
                                    shuffle=hdf5plugin.Blosc.BITSHUFFLE,
                                    ),
             ),
-            truncbits=truncpos,
+            truncbits=int(truncpos),
             blockname="POS ",
         ),
         Velocities=dict(
@@ -141,7 +145,7 @@ def get_compression_opts(header, truncpos, truncvel, clevel=5):
                                    shuffle=hdf5plugin.Blosc.BITSHUFFLE,
                                    ),
             ),
-            truncbits=truncvel,
+            truncbits=int(truncvel),
             blockname="VEL ",
         ),
         ParticleIDs=dict(
@@ -156,6 +160,7 @@ def get_compression_opts(header, truncpos, truncvel, clevel=5):
             truncbits=0,
             blockname="ID  ",
         ),
+        sort=sort,
     )
 
     return compression_opts
@@ -185,8 +190,8 @@ def validate_headers(headers):
         assert np.all((header['massarr'] > 0) == (header['nall'] > 0))
         assert header['time'] > 0
         assert header['redshift'] > 0
-        assert header['nall'].sum() in (512**3, 1024**3, 512**3 * 2)
-        assert header['filenum'] in (8,64,128,512)
+        assert header['nall'].sum() in (256**3, 512**3, 1024**3, 512**3 * 2)
+        assert header['filenum'] in (8,16,64,128,512)
         assert (header['filenum'] // len(headers)) * len(headers) == header['filenum']
         # assert header['boxsize'] == 1e6
 

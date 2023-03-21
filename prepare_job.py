@@ -8,7 +8,8 @@ import click
 COMPRESS_HDF5 = (Path(__file__).parent / 'compress_hdf5.py').resolve()
 COMPRESS_GADGET = (Path(__file__).parent / 'compress_gadget.py').resolve()
 
-NOUT_IC = { 64: 8,
+NOUT_IC = { 16: 8,
+            64: 8,
            128: 8,
            512: 8,
            }
