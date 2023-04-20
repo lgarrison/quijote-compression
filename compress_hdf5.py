@@ -10,6 +10,14 @@ import hdf5plugin
 import numpy as np
 
 
+TRUNC_LEVELS = {
+    # (box, n1d): (truncpos, truncvel)
+    (1e6,1024): (6,11),
+    (1e6,512): (7,11),
+    (1e6,256): (8,11),
+    }
+
+
 @click.command()
 @click.argument('src', nargs=-1)
 @click.argument('dst')
@@ -83,13 +91,6 @@ def nearest_boxsize(box):
 
 
 def get_compression_opts(attrs, truncpos, truncvel, clevel=5):
-
-    TRUNC_LEVELS = {
-        # (box, n1d): (truncpos, truncvel)
-        (1e6,1024): (6,11),
-        (1e6,512): (7,11),
-        (1e6,256): (8,11),
-        }
 
     box = attrs['BoxSize']
     rounded_box = nearest_boxsize(box)

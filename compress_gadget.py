@@ -14,6 +14,8 @@ import hdf5plugin
 import numpy as np
 import readsnap
 
+from compress_hdf5 import TRUNC_LEVELS
+
 
 @click.command()
 @click.argument('src', nargs=-1)
@@ -107,13 +109,6 @@ def compress(src, dst, truncpos, truncvel, verbose=False, sort=False):
 
 
 def get_compression_opts(header, truncpos, truncvel, clevel=5, sort=False):
-
-    TRUNC_LEVELS = {
-        # (box, n1d): (truncpos, truncvel)
-        (1e6,1024): (6,11),
-        (1e6,512): (7,11),
-        (1e6,256): (8,11),
-        }
 
     box = header['BoxSize']
     n1d = int(round(header['NumPart_Total'][1]**(1/3)))
