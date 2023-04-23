@@ -1,0 +1,4 @@
+hdf5plugin
+click
+tqdm
+Pylians
