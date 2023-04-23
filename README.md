@@ -11,7 +11,7 @@ The workflow is the following:
 5. Verify that the results look sane, then move or delete the original files by hand.
 
 ### Configuration
-If you are compressing a simulation with an unknown combination of box size and number of particles, you may need to add an entry to the `TRUNC_LEVELS` dict indicating the number of bits of truncation to perform.  Every factor-of-two increase in N1D calls for 1 fewer bit of position truncation (assuming the softening as a fraction of the particle spacing is fixed). Velocity truncation can probably stay fixed.
+If you are compressing a simulation with a new combination of box size and number of particles, you may need to add an entry to the `TRUNC_LEVELS` dict indicating the number of bits of truncation to perform.  Every factor-of-two increase in N1D calls for 1 fewer bit of position truncation (assuming the softening as a fraction of the particle spacing is fixed). Velocity truncation can probably stay fixed.
 
 Also, if you are compressing IC files with a number of files per sim that hasn't been seen before, you may need to add an entry to `NOUT_IC` in `prepare_job.py`.
 
