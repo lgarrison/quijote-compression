@@ -32,17 +32,16 @@ def prepare(src, dst, verbose=False):
         if dstpath.exists():
             copyfns = []
             for fn in fns:
-                if re.match(r'ics\.\d+', fn):
+                if re.match(r'ics\.\d+', fn) or re.match(r'snap_\w*\.\w*', fn):
                     continue
                 if not (dstpath / fn).exists() or \
                     ((dstpath / fn).stat().st_size != (srcpath / fn).stat().st_size):
-                    assert not fn.endswith('.hdf5')
                     copyfns += [str(srcpath / fn)]
             if copyfns:
-                print(f'cp -t {str(dstpath)} {" ".join(copyfns)}')
+                print(f'cp -dt {str(dstpath)} {" ".join(copyfns)}')
         else:
             assert not re.match(r'snapdir_\d+', dstpath.name)
-            print(f'cp -r {srcpath} {dstpath}')
+            print(f'cp -dr {srcpath} {dstpath}')
             dns.clear()
 
         i += 1

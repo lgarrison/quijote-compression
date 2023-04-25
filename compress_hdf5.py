@@ -13,8 +13,9 @@ import numpy as np
 TRUNC_LEVELS = {
     # (box, n1d): (truncpos, truncvel)
     (1e6,1024): (6,11),
-    (1e6,512): (7,11),
-    (1e6,256): (8,11),
+    (1e6,512):  (7,11),
+    (1e6,256):  (8,11),
+    (25e3,256): (8,11),
     }
 
 
@@ -87,6 +88,8 @@ def compress(src, dst, truncpos='auto', truncvel='auto', verbose=False):
 def nearest_boxsize(box):
     '''Boxsize to the nearest factor of two relative to 1e6
     '''
+    if box == 25000.:  # CAMELS boxes
+        return box
     return 2**np.round(np.log2(box/1e6))*1e6
 
 

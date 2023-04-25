@@ -4,7 +4,6 @@ Compress Gadget files (IC or snap) to HDF5
 '''
 
 import json
-import re
 from pathlib import Path
 from timeit import default_timer
 

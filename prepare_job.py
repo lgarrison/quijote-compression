@@ -8,7 +8,8 @@ import click
 COMPRESS_HDF5 = (Path(__file__).parent / 'compress_hdf5.py').resolve()
 COMPRESS_GADGET = (Path(__file__).parent / 'compress_gadget.py').resolve()
 
-NOUT_IC = { 16: 8,
+NOUT_IC = {  8: 8,
+            16: 8,
             64: 8,
            128: 8,
            512: 8,
@@ -28,8 +29,8 @@ def prepare(root, out):
 
     hdf5_tasks = []
     gadget_tasks = []
+    # N.B. glob('**') does not follow symlinks
     for fn in root.glob('**/snap_*.*'):
-        assert 'snapdir_' in fn.parent.name
         if fn.suffix == '.hdf5':
             hdf5_tasks += [f'{fn} {out/fn.relative_to(root).parent}']
         else:
@@ -52,7 +53,7 @@ def prepare_ic(root, out):
 
     print(rf'#DISBATCH PREFIX {COMPRESS_GADGET} -v 0 -p 0 ')
 
-    for d in root.glob('*/*/ICs'):
+    for d in root.glob('**/ICs/'):
         fns = sorted(d.glob('ics.*'), key=lambda f: int(f.suffix[1:]))
 
         if len(fns) == 0:
