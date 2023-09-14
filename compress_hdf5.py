@@ -53,18 +53,29 @@ def compress(src, dst, truncpos='auto', truncvel='auto', verbose=False):
             h5out.create_group('/CompressionInfo')
             h5out['/CompressionInfo'].attrs['json'] = json.dumps(compression_opts)
 
-            for i in [1,2]:
+            for i in range(6):
                 if f'/PartType{i}' not in h5in:
                     continue
                 # iord = np.argsort(h5in[f'/PartType{i}/ParticleIDs'][:])
-                for name in compression_opts:
+                for name in h5in[f'/PartType{i}'].keys():
                     p = h5in[f'/PartType{i}/{name}'][:]
 
-                    tbits = compression_opts[name]['truncbits']
-                    mask = ~np.uint32((1 << tbits) - 1)
-                    p = (p.view(dtype=np.uint32) & mask).view(dtype=p.dtype)
+                    if not np.issubdtype(p.dtype, np.integer):
+                        tbits = 0  # compression_opts[name]['truncbits']
+                        mask = ~np.uint32((1 << tbits) - 1)
+                        p = (p.view(dtype=np.uint32) & mask).view(dtype=p.dtype)
+                        copt = hdf5plugin.SZ3(relative=2**-13)
+                    else:
+                        copt = hdf5plugin.SZ3(absolute=0)
+
                     h5out.create_dataset(f'/PartType{i}/{name}', data=p,
-                        **compression_opts[name]['hdf5'],
+                        # **compression_opts[name]['hdf5'],
+                        # chunks = (1<<16,3) if p.ndim > 1 else (1<<16,),
+                        # **hdf5plugin.Blosc(cname='zstd',
+                        #                     clevel=5,
+                        #                     shuffle=hdf5plugin.Blosc.SHUFFLE,
+                        #                     ),
+                        **copt
                         )
                     h5size += p.nbytes
 
@@ -152,7 +163,7 @@ def validate_paths(sources: list[Path], dst):
             raise ValueError('Source and dest are the same!')
 
 
-def validate_input(h):
+def validate_input(h, camels=True):
     # do some schema validation
     KNOWN_HDF5_GROUPS = ['Header',
                          'PartType1',
@@ -171,7 +182,8 @@ def validate_input(h):
         if (g in GROUPS_WITH_ATTRS) != bool(h[g].attrs):
             raise ValueError(g)
         
-    h.visit(_check)
+    if not camels:
+        h.visit(_check)
                         
 
 if __name__ == '__main__':
